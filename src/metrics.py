@@ -28,11 +28,26 @@ def text_retention_similarity(ai_draft: Optional[str], final_draft: Optional[str
     return float(cosine_similarity(matrix[0:1], matrix[1:2])[0, 0])
 
 
+
 def safe_rate(numerator: float, denominator: float) -> Optional[float]:
-    """Return numerator/denominator, or None when denominator is zero."""
+    """Return a validated rate, or None when the denominator is zero.
+
+    Counts must be non-negative, and a rate numerator cannot exceed
+    its denominator. Invalid values raise ValueError.
+    """
+    if numerator < 0 or denominator < 0:
+        raise ValueError("Numerator and denominator must be non-negative.")
+
+    if numerator > denominator:
+        raise ValueError("Numerator cannot exceed denominator.")
+
     if denominator == 0:
-        return None
+        if numerator == 0:
+            return None
+        raise ValueError("A positive numerator cannot have a zero denominator.")
+
     return float(numerator) / float(denominator)
+
 
 
 def incorrect_claim_retention_rate(
@@ -125,3 +140,20 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+import pytest
+
+
+def test_safe_rate_rejects_negative_values():
+    with pytest.raises(ValueError):
+        safe_rate(-1, 2)
+
+
+def test_safe_rate_rejects_numerator_above_denominator():
+    with pytest.raises(ValueError):
+        safe_rate(3, 2)
+
+
+def test_safe_rate_zero_over_zero_is_undefined():
+    assert safe_rate(0, 0) is None
